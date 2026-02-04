@@ -1,1 +1,13 @@
 /* You can add global styles to this file, and also import other style files */
+/* Add Bootstrap */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+/* Custom styles */
+body {
+  padding-top: 20px;
+  background-color: #f8f9fa;
+}
+
+pre {
+  font-size: 12px;
+}

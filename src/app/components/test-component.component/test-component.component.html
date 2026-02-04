@@ -1,0 +1,45 @@
+  <div class="container mt-5">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h3 class="mb-0">🧠 AI Auto-Coder Test Panel</h3>
+        </div>
+        <div class="card-body">
+          <p class="text-muted">Click buttons below to simulate different Angular errors.</p>
+          
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <button class="btn btn-danger w-100" (click)="generateTemplateError()">
+                🚨 Template Error
+              </button>
+            </div>
+            <div class="col-md-4">
+              <button class="btn btn-warning w-100" (click)="generateTypeError()">
+                ⚠️ Type Error
+              </button>
+            </div>
+            <div class="col-md-4">
+              <button class="btn btn-info w-100" (click)="generateReferenceError()">
+                🔍 Reference Error
+              </button>
+            </div>
+          </div>
+          
+          <div class="alert alert-light border">
+            <h5 class="alert-heading">📊 Error Simulation</h5>
+            <p>When you click a button, errors will appear in console and AI will suggest fixes.</p>
+            
+            <div class="mt-3">
+              <button class="btn btn-outline-primary btn-sm" (click)="testValidCode()">
+                Test Valid Code
+              </button>
+            </div>
+          </div>
+          
+          <!-- Demo template that might have errors -->
+          <div class="mt-4 p-3 bg-light rounded">
+            <h6>Current Component State:</h6>
+            <pre class="bg-dark text-light p-2 rounded">{{ componentState | json }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
