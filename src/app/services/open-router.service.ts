@@ -6,34 +6,25 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class OpenRouterService {
-  private apiKey = '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'; // Replace with your actual key
-  private apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
+  // API key is now stored securely in Node.js backend (.env file)
+  // No longer exposed to frontend
+  private backendUrl = 'https://stunning-doodle-97gqp4jwwq95cjj9-3000.app.github.dev/api';
 
   constructor(private http: HttpClient) {}
 
   fixError(error: string, codeContext: string): Observable<any> {
+    // Headers no longer need Authorization - backend handles API key
     const headers = new HttpHeaders({
-      'Authorization': `Bearer ${this.apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'http://localhost:4200', // Required for some OpenRouter endpoints
-      'X-Title': 'Angular AI Auto-Coder'
+      'Content-Type': 'application/json'
     });
 
     const body = {
-      model: "openai/gpt-5.2",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert Angular developer. Analyze the error and provide the exact fixed code only. No explanations."
-        },
-        {
-          role: "user",
-          content: `Angular Error: ${error}\n\nFix the following Angular code:\n${codeContext}`
-        }
-      ],
-      max_tokens: 300
+      error: error,
+      codeContext: codeContext
     };
 
-    return this.http.post(this.apiUrl, body, { headers });
+    // Call Node.js backend proxy instead of OpenRouter directly
+    return this.http.post(`${this.backendUrl}/fix-error`, body, { headers });
   }
 }
+
