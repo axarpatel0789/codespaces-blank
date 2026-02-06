@@ -19,8 +19,6 @@ export class TestComponentComponent implements OnInit {
   constructor(private errorInterceptor: ErrorInterceptorService) {}
   
   ngOnInit() {
-    // Initialize error interceptor
-    this.errorInterceptor.initialize();
     console.log('Test component loaded. AI Auto-Coder is active.');
   }
   
