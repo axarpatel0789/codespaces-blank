@@ -28,10 +28,10 @@ export class TestComponentComponent implements OnInit {
     console.error('Property binding undefinedDirective not used by any directive on an embedded template.');
   }
   
-  generateTypeError() {
-    console.error('TypeError: Cannot read properties of undefined (reading \'name\')');
-    console.error('at TestComponent.getUserName (test.component.ts:25:15)');
-  }
+  // generateTypeError() {
+  //   console.error('TypeError: Cannot read properties of undefined (reading \'name\')');
+  //   console.error('at TestComponent.getUserName (test.component.ts:25:15)');
+  // }
   
   generateReferenceError() {
     console.error('ReferenceError: userData is not defined');

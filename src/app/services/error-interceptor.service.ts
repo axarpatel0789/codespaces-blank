@@ -6,10 +6,16 @@ import { OpenRouterService } from './open-router.service';
 })
 export class ErrorInterceptorService {
   private originalConsoleError: any;
+  private isActive = false;
 
-  constructor(private openRouterService: OpenRouterService) {}
+  constructor(private openRouterService: OpenRouterService) {
+    // Auto-initialize when service is created
+    this.setupErrorHandling();
+  }
 
-  initialize() {
+  private setupErrorHandling() {
+    if (this.isActive) return;
+    
     // Store original console.error
     this.originalConsoleError = console.error;
     
@@ -19,178 +25,117 @@ export class ErrorInterceptorService {
       this.originalConsoleError.apply(console, args);
     };
 
-    console.log('AI Auto-Coder initialized and monitoring errors...');
+    this.isActive = true;
+    console.log('✅ AI Error Interceptor started');
   }
 
-  private handleError(errorArgs: any[]) {
-    const errorMessage = errorArgs.join(' ');
-    
-    // Check if it's an Angular error
-    if (this.isAngularError(errorMessage)) {
-      console.log('%cAI Auto-Coder: Angular error detected', 'color: #FF6B6B; font-weight: bold;', errorMessage);
-      
-      // Get simulated code context for demo
-      const codeContext = this.getSimulatedCodeContext();
-      
-      // Call AI to fix error
-      this.openRouterService.fixError(errorMessage, codeContext).subscribe({
-        next: (response) => {
-          if (response.choices && response.choices[0]?.message?.content) {
-            const fixedCode = response.choices[0].message.content;
-            this.showFixToUser(fixedCode, errorMessage);
-          }
-        },
-        error: (err) => {
-          console.error('AI API Error:', err);
-          this.showError('Failed to connect to AI service. Check API key.');
+  private handleError(args: any[]) {
+    try {
+      const errorMessage = args.map(arg => {
+        if (typeof arg === 'object') {
+          return arg.message || JSON.stringify(arg);
         }
-      });
+        return String(arg);
+      }).join(' ');
+
+      // Check if it's an Angular error
+      if (this.isAngularError(errorMessage)) {
+        console.log('🤖 AI detected error:', errorMessage.substring(0, 100));
+        
+        // Get code context from stack trace
+        const codeContext = this.getCodeContext(args);
+        
+        // Call AI service
+        this.openRouterService.fixError(errorMessage, codeContext)
+          .subscribe(response => {
+            if (response.success && response.solution) {
+              this.showFix(response.solution, errorMessage);
+            }
+          });
+      }
+    } catch (err) {
+      // Silently fail if error handler itself errors
+      console.warn('Error handler failed:', err);
     }
   }
 
   private isAngularError(error: string): boolean {
-    // Check for common Angular error patterns
     const patterns = [
-      /NG\d{4}/, // Angular error codes like NG0100, NG0201, etc.
-      /ExpressionChangedAfterItHasBeenCheckedError/,
-      /Template parse errors/,
-      /Cannot find/,
-      /No provider for/,
-      /is not a known element/,
-      /is not a function/,
-      /of undefined/
+      /NG\d{4}/,
+      /ExpressionChanged/,
+      /Cannot read property/,
+      /undefined is not/,
+      /NullInjectorError/,
+      /TypeError/,
+      /ReferenceError/
     ];
     
     return patterns.some(pattern => pattern.test(error));
   }
 
-  private getSimulatedCodeContext(): string {
-    // For demo purposes, return a simple Angular component
-    return `
-    @Component({
-      selector: 'app-test',
-      template: \`
-        <div>{{ user.name }}</div>
-        <button (click)="handleClick()">Click</button>
-      \`
-    })
-    export class TestComponent {
-      user: any;
-      
-      handleClick() {
-        console.log('Clicked');
+  private getCodeContext(args: any[]): string {
+    // Find stack trace in args
+    for (const arg of args) {
+      if (arg instanceof Error && arg.stack) {
+        return arg.stack.substring(0, 500);
       }
     }
-    `;
+    return 'No stack trace available';
   }
 
-  private showFixToUser(fixedCode: string, originalError: string) {
-    // Create notification
-    const notification = document.createElement('div');
-    notification.id = 'ai-auto-coder-notification';
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 20px;
-      border-radius: 10px;
-      z-index: 9999;
-      max-width: 500px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-      font-family: 'Segoe UI', Arial, sans-serif;
-      border-left: 5px solid #4CAF50;
-      animation: slideIn 0.3s ease;
-    `;
-    
-    notification.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h4 style="margin: 0; font-size: 18px;">
-          🚀 AI Auto-Coder Found a Fix!
-        </h4>
-        <button onclick="document.getElementById('ai-auto-coder-notification').remove()" 
-                style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">
-          ×
-        </button>
-      </div>
-      
-      <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-        <strong style="font-size: 12px; opacity: 0.9;">Original Error:</strong>
-        <div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">${originalError.substring(0, 100)}...</div>
-      </div>
-      
-      <div style="margin: 10px 0;">
-        <strong style="font-size: 12px; opacity: 0.9;">Suggested Fix:</strong>
-        <div style="position: relative;">
-          <pre style="background: #1e1e1e; padding: 15px; border-radius: 5px; overflow: auto; 
-                     color: #d4d4d4; margin-top: 10px; font-size: 12px; max-height: 200px;">
-${this.escapeHtml(fixedCode)}
-          </pre>
-          <button onclick="navigator.clipboard.writeText(\`${this.escapeForCopy(fixedCode)}\`); 
-                          this.textContent='✓ Copied!'; setTimeout(() => this.textContent='📋 Copy', 2000)"
-                  style="position: absolute; top: 10px; right: 10px; background: #4CAF50; color: white; 
-                         border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 11px;">
-            📋 Copy
-          </button>
-        </div>
-      </div>
-      
-      <div style="font-size: 11px; opacity: 0.7; text-align: center; margin-top: 10px;">
-        Powered by OpenRouter AI
-      </div>
-    `;
-    
-    // Add animation
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-      }
-    `;
-    document.head.appendChild(style);
-    
+  private showFix(solution: string, error: string) {
     // Remove existing notification
-    const existing = document.getElementById('ai-auto-coder-notification');
+    const existing = document.getElementById('ai-fix-notification');
     if (existing) existing.remove();
-    
-    document.body.appendChild(notification);
-    
-    // Auto-remove after 60 seconds
-    setTimeout(() => {
-      if (notification.parentElement) {
-        notification.remove();
-      }
-    }, 60000);
-  }
 
-  private showError(message: string) {
-    const errorDiv = document.createElement('div');
-    errorDiv.style.cssText = `
+    // Create notification
+    const div = document.createElement('div');
+    div.id = 'ai-fix-notification';
+    
+    div.style.cssText = `
       position: fixed;
       top: 20px;
       right: 20px;
-      background: #dc3545;
+      background: #4CAF50;
       color: white;
       padding: 15px;
-      border-radius: 5px;
+      border-radius: 8px;
       z-index: 9999;
-      max-width: 300px;
+      max-width: 400px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-family: Arial, sans-serif;
     `;
-    errorDiv.textContent = message;
     
-    document.body.appendChild(errorDiv);
-    setTimeout(() => errorDiv.remove(), 5000);
+    const shortError = error.length > 100 ? error.substring(0, 100) + '...' : error;
+    const shortSolution = solution.length > 150 ? solution.substring(0, 150) + '...' : solution;
+    
+    div.innerHTML = `
+      <div style="font-weight: bold; margin-bottom: 5px; font-size: 16px;">🤖 AI Fix Found</div>
+      <div style="font-size: 12px; opacity: 0.9; margin-bottom: 8px;">${shortError}</div>
+      <div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 14px;">
+        ${shortSolution}
+      </div>
+      <button onclick="navigator.clipboard.writeText('${this.escapeText(solution)}')" 
+              style="background: white; color: #4CAF50; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+        Copy Fix
+      </button>
+      <button onclick="this.parentElement.remove()" 
+              style="background: transparent; color: white; border: 1px solid white; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 8px;">
+        Dismiss
+      </button>
+    `;
+    
+    document.body.appendChild(div);
+    
+    // Auto remove after 15 seconds
+    setTimeout(() => {
+      if (div.parentElement) {
+        div.remove();
+      }
+    }, 15000);
   }
 
-  private escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  private escapeForCopy(text: string): string {
-    return text.replace(/`/g, '\\`').replace(/\${/g, '\\${');
+  private escapeText(text: string): string {
+    return text.replace(/'/g, "\\'").replace(/"/g, '\\"');
   }
 }

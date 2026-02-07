@@ -11,10 +11,13 @@ import { ErrorInterceptorService } from './services/error-interceptor.service';
 })
 export class App {
   protected readonly title = signal('new-app');
-  private errorInterceptor = inject(ErrorInterceptorService);
-  
-  constructor() {
-    // Initialize error interceptor on app startup
-    this.errorInterceptor.initialize();
+  constructor(private ErrorInterceptorService: ErrorInterceptorService) {
+    // No need to call initialize() - it auto-runs in constructor
+    console.log('App started');
+  }
+
+  testError() {
+    // This will trigger the error interceptor
+    console.error('Test error: Cannot read property "name" of undefined');
   }
 }

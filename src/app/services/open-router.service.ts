@@ -1,30 +1,47 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
 })
 export class OpenRouterService {
-  // API key is now stored securely in Node.js backend (.env file)
-  // No longer exposed to frontend
+  // Change this to your actual backend URL
   private backendUrl = 'https://stunning-doodle-97gqp4jwwq95cjj9-3000.app.github.dev/api';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    this.testConnection();
+  }
 
   fixError(error: string, codeContext: string): Observable<any> {
-    // Headers no longer need Authorization - backend handles API key
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json'
-    });
-
-    const body = {
+    return this.http.post(`${this.backendUrl}/fix-error`, {
       error: error,
       codeContext: codeContext
-    };
+    }).pipe(
+      catchError(err => {
+        console.log('Backend error, using fallback');
+        return of({
+          success: false,
+          solution: this.getFallback(error)
+        });
+      })
+    );
+  }
 
-    // Call Node.js backend proxy instead of OpenRouter directly
-    return this.http.post(`${this.backendUrl}/fix-error`, body, { headers });
+  testConnection() {
+    this.http.get(`${this.backendUrl}/health`)
+      .subscribe({
+        next: () => console.log('✅ Backend connected'),
+        error: () => console.log('❌ Backend not connected')
+      });
+  }
+
+  private getFallback(error: string): string {
+    if (error.includes('Cannot read')) return 'Use: obj?.property or check if obj exists';
+    if (error.includes('undefined')) return 'Initialize variable: let x = value;';
+    if (error.includes('NullInjector')) return 'Add service to providers array in module';
+    if (error.includes('TypeError')) return 'Check variable types before operations';
+    return 'Review error in browser console';
   }
 }
-
