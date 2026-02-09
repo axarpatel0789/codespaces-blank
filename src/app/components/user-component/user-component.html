@@ -1,0 +1,12 @@
+<table class="table">
+    <thead>
+        <th>Name</th>
+        <th>Email</th>
+    </thead>
+    @for (user of users(); track user.id) {
+    <tr>
+        <td>{{user.name}}</td>
+        <td>{{user.email}}</td>
+    </tr>
+    }
+</table>

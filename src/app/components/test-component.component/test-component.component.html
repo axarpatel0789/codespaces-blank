@@ -1,45 +1,214 @@
-  <div class="container mt-5">
-      <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-          <h3 class="mb-0">🧠 AI Auto-Coder Test Panel</h3>
+<!-- Main container -->
+<div class="container mt-5">
+  
+  <!-- Top header card -->
+  <div class="card shadow-lg mb-4">
+    <div class="card-header text-white text-center py-4" 
+         style="background: linear-gradient(135deg, #a1a9ce 0%, #764ba2 100%);">
+      <h2 class="mb-1">AI Auto-Coder Dashboard</h2>
+      <p class="mb-0 small">Real-time error detection and AI-powered fixes</p>
+    </div>
+  </div>
+
+  <!-- Two column layout -->
+  <div class="row">
+    
+    <!-- Left column - Error simulation -->
+    <div class="col-lg-5 mb-4">
+      <div class="card shadow h-100">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Error Simulation Panel</h5>
         </div>
         <div class="card-body">
-          <p class="text-muted">Click buttons below to simulate different Angular errors.</p>
+          <p class="text-muted small mb-4">
+            Click buttons to trigger different Angular errors and watch AI solve them
+          </p>
           
-          <div class="row g-3 mb-4">
-            <div class="col-md-4">
-              <button class="btn btn-danger w-100" (click)="generateTemplateError()">
-                🚨 Template Error
-              </button>
-            </div>
-            <!-- <div class="col-md-4">
-              <button class="btn btn-warning w-100" (click)="generateTypeError()">
-                ⚠️ Type Error
-              </button>
-            </div> -->
-            <div class="col-md-4">
-              <button class="btn btn-info w-100" (click)="generateReferenceError()">
-                🔍 Reference Error
-              </button>
-            </div>
-          </div>
-          
-          <div class="alert alert-light border">
-            <h5 class="alert-heading">📊 Error Simulation</h5>
-            <p>When you click a button, errors will appear in console and AI will suggest fixes.</p>
+          <!-- Error buttons -->
+          <div class="d-grid gap-3">
+            <button class="btn btn-lg btn-danger" (click)="generateTemplateError()">
+              <div class="d-flex justify-content-between align-items-center">
+                <span>Template Error</span>
+                <span class="badge bg-white text-danger">NG0303</span>
+              </div>
+            </button>
             
-            <div class="mt-3">
-              <button class="btn btn-outline-primary btn-sm" (click)="testValidCode()">
-                Test Valid Code
-              </button>
-            </div>
+            <button class="btn btn-lg btn-warning" (click)="generateReferenceError()">
+              <div class="d-flex justify-content-between align-items-center">
+                <span>Reference Error</span>
+                <span class="badge bg-white text-warning">ReferenceError</span>
+              </div>
+            </button>
+            
+            <button class="btn btn-lg btn-success" (click)="testValidCode()">
+              <div class="d-flex justify-content-between align-items-center">
+                <span>Test Valid Code</span>
+                <span class="badge bg-white text-success">OK</span>
+              </div>
+            </button>
           </div>
-          
-          <!-- Demo template that might have errors -->
+
+          <!-- Statistics using signals -->
           <div class="mt-4 p-3 bg-light rounded">
-            <h6>Current Component State:</h6>
-            <pre class="bg-dark text-light p-2 rounded">{{ componentState | json }}</pre>
+            <h6 class="mb-3">Statistics</h6>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="small">Total Errors:</span>
+              <span class="badge bg-danger">{{ totalErrors() }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="small">AI Fixes:</span>
+              <span class="badge bg-success">{{ aiFixes() }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+              <span class="small">Success Rate:</span>
+              <span class="badge bg-info">{{ successRate() }}%</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Right column - Error display and AI solution -->
+    <div class="col-lg-7">
+      
+      <!-- Current Error Display -->
+      <div class="card shadow mb-4">
+        <div class="card-header bg-danger text-white">
+          <h5 class="mb-0">Current Error</h5>
+        </div>
+        <div class="card-body">
+          <div *ngIf="currentError(); else noError">
+            <!-- Error type badge -->
+            <span class="badge bg-danger mb-2">{{ currentError().type }}</span>
+            
+            <!-- Error message -->
+            <div class="alert alert-danger mb-0">
+              <h6 class="alert-heading">Error Message:</h6>
+              <code class="text-danger">{{ currentError().message }}</code>
+            </div>
+            
+            <!-- Timestamp -->
+            <small class="text-muted d-block mt-2">
+              Detected at: {{ currentError().timestamp | date:'short' }}
+            </small>
+          </div>
+          
+          <!-- No error state -->
+          <ng-template #noError>
+            <div class="text-center text-muted py-4">
+              <p class="mb-0">No errors detected yet</p>
+              <small>Click a button to simulate an error</small>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+
+      <!-- AI Solution Display -->
+      <div class="card shadow">
+        <div class="card-header bg-success text-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">AI Solution</h5>
+            <span *ngIf="aiSolution() && !isProcessing()" class="badge bg-white text-success">
+              {{ aiSolution().status }}
+            </span>
+          </div>
+        </div>
+        <div class="card-body">
+          
+          <!-- Modern Minimal Loader -->
+          <div *ngIf="isProcessing()" class="text-center py-5">
+            <div class="loader-dots">
+              <div class="dot"></div>
+              <div class="dot"></div>
+              <div class="dot"></div>
+            </div>
+            <p class="text-success mt-3 mb-0 fw-bold">AI is analyzing...</p>
+          </div>
+
+          <!-- AI Solution content -->
+          <div *ngIf="!isProcessing() && aiSolution()">
+            <!-- Solution explanation -->
+            <div class="alert alert-success">
+              <h6 class="alert-heading">Suggested Fix:</h6>
+              <p class="mb-0">{{ aiSolution().solution }}</p>
+            </div>
+
+            <!-- Code suggestion if available -->
+            <div *ngIf="aiSolution().code" class="mt-3">
+              <h6>Code Example:</h6>
+              <pre class="bg-dark text-light p-3 rounded"><code>{{ aiSolution().code }}</code></pre>
+              
+              <!-- Copy button -->
+              <button class="btn btn-sm btn-outline-success" (click)="copySolution()">
+                Copy Code
+              </button>
+            </div>
+
+            <!-- Confidence score -->
+            <div class="mt-3">
+              <small class="text-muted">Confidence Score:</small>
+              <div class="progress mt-1" style="height: 20px;">
+                <div class="progress-bar bg-success" 
+                     [style.width.%]="aiSolution().confidence"
+                     role="progressbar">
+                  {{ aiSolution().confidence }}%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- No solution state -->
+          <div *ngIf="!isProcessing() && !aiSolution()" class="text-center text-muted py-4">
+            <p class="mb-0">No AI solution available</p>
+            <small>Trigger an error to see AI-powered fixes</small>
+          </div>
+          
+        </div>
+      </div>
+
+      <!-- Error History using signals -->
+      <div class="card shadow mt-4">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0">Error History</h5>
+        </div>
+        <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+          <div *ngIf="errorHistory().length > 0; else noHistory">
+            <div *ngFor="let item of errorHistory(); let i = index" 
+                 class="border-bottom pb-2 mb-2">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <span class="badge bg-secondary">{{ i + 1 }}</span>
+                  <span class="ms-2 small">{{ item.type }}</span>
+                </div>
+                <small class="text-muted">{{ item.timestamp | date:'shortTime' }}</small>
+              </div>
+              <p class="small mb-1 mt-1 text-truncate">{{ item.message }}</p>
+              <span class="badge" 
+                    [ngClass]="item.fixed ? 'bg-success' : 'bg-warning'">
+                {{ item.fixed ? 'Fixed by AI' : 'Pending' }}
+              </span>
+            </div>
+          </div>
+          
+          <ng-template #noHistory>
+            <div class="text-center text-muted py-3">
+              <p class="mb-0">No error history yet</p>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Component State Display -->
+  <div class="card shadow mt-4">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Component State Monitor</h5>
+    </div>
+    <div class="card-body">
+      <pre class="bg-dark text-light p-3 rounded mb-0"><code>{{ componentState | json }}</code></pre>
+    </div>
+  </div>
+
+</div>

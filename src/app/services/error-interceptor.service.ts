@@ -1,5 +1,7 @@
+// Import necessary modules
 import { Injectable } from '@angular/core';
 import { OpenRouterService } from './open-router.service';
+import { ErrorLoggingService } from './error-logging-service';
 
 @Injectable({
   providedIn: 'root'
@@ -8,7 +10,10 @@ export class ErrorInterceptorService {
   private originalConsoleError: any;
   private isActive = false;
 
-  constructor(private openRouterService: OpenRouterService) {
+  constructor(
+    private openRouterService: OpenRouterService,
+    private errorLoggingService: ErrorLoggingService  // Inject error logging service
+  ) {
     // Auto-initialize when service is created
     this.setupErrorHandling();
   }
@@ -19,18 +24,19 @@ export class ErrorInterceptorService {
     // Store original console.error
     this.originalConsoleError = console.error;
     
-    // Override console.error
+    // Override console.error to capture all errors
     console.error = (...args: any[]) => {
       this.handleError(args);
       this.originalConsoleError.apply(console, args);
     };
 
     this.isActive = true;
-    console.log('✅ AI Error Interceptor started');
+    console.log('AI Error Interceptor started with logging enabled');
   }
 
   private handleError(args: any[]) {
     try {
+      // Convert error arguments to string
       const errorMessage = args.map(arg => {
         if (typeof arg === 'object') {
           return arg.message || JSON.stringify(arg);
@@ -38,25 +44,100 @@ export class ErrorInterceptorService {
         return String(arg);
       }).join(' ');
 
-      // Check if it's an Angular error
+      // Check if it's an Angular error we should handle
       if (this.isAngularError(errorMessage)) {
         console.log('🤖 AI detected error:', errorMessage.substring(0, 100));
         
         // Get code context from stack trace
         const codeContext = this.getCodeContext(args);
         
-        // Call AI service
+        // Get component name from stack trace
+        const component = this.getComponentName(codeContext);
+        
+        // Call AI service to get fix
         this.openRouterService.fixError(errorMessage, codeContext)
-          .subscribe(response => {
-            if (response.success && response.solution) {
-              this.showFix(response.solution, errorMessage);
+          .subscribe({
+            next: (response) => {
+              if (response.success) {
+                // Extract AI solution
+                const aiSolution = this.extractSolution(response);
+                
+                // Show fix to user
+                this.showFix(aiSolution, errorMessage);
+                
+                // Log error with AI solution to backend
+                this.logErrorToBackend(errorMessage, codeContext, aiSolution, component);
+              }
+            },
+            error: (err) => {
+              console.warn('AI service failed, logging error without solution');
+              
+              // Log error without AI solution
+              this.logErrorToBackend(errorMessage, codeContext, null, component);
             }
           });
       }
     } catch (err) {
-      // Silently fail if error handler itself errors
       console.warn('Error handler failed:', err);
     }
+  }
+
+  // Extract AI solution from response
+  private extractSolution(response: any): string {
+    if (response?.data?.rawResponse?.choices?.[0]?.message?.content) {
+      return response.data.rawResponse.choices[0].message.content;
+    } else if (response?.data?.fixedCode) {
+      return response.data.fixedCode;
+    } else if (response?.solution) {
+      return response.solution;
+    }
+    return 'No solution provided';
+  }
+
+  // Log error to backend database
+  private logErrorToBackend(
+    errorMessage: string, 
+    errorStack: string, 
+    aiSolution: string | null,
+    component: string
+  ) {
+    // Prepare error data
+    const errorData = {
+      errorType: 'frontend' as const,
+      errorMessage: errorMessage,
+      errorStack: errorStack,
+      aiSolution: aiSolution || 'No AI solution generated',
+      component: component,
+      timestamp: new Date()
+    };
+    
+    // Send to backend
+    this.errorLoggingService.logError(errorData)
+      .subscribe({
+        next: (result: any) => {
+          console.log('Error logged to database:', result);
+        },
+        error: (err: any) => {
+          console.warn('Failed to log error to database:', err);
+        }
+      });
+  }
+
+  // Extract component name from stack trace
+  private getComponentName(stackTrace: string): string {
+    // Try to extract component name from stack trace
+    const match = stackTrace.match(/at\s+(\w+Component)/);
+    if (match && match[1]) {
+      return match[1];
+    }
+    
+    // Try to extract filename
+    const fileMatch = stackTrace.match(/\((.+?\.ts):\d+:\d+\)/);
+    if (fileMatch && fileMatch[1]) {
+      return fileMatch[1];
+    }
+    
+    return 'Unknown Component';
   }
 
   private isAngularError(error: string): boolean {
@@ -74,7 +155,6 @@ export class ErrorInterceptorService {
   }
 
   private getCodeContext(args: any[]): string {
-    // Find stack trace in args
     for (const arg of args) {
       if (arg instanceof Error && arg.stack) {
         return arg.stack.substring(0, 500);
@@ -88,7 +168,7 @@ export class ErrorInterceptorService {
     const existing = document.getElementById('ai-fix-notification');
     if (existing) existing.remove();
 
-    // Create notification
+    // Create notification element
     const div = document.createElement('div');
     div.id = 'ai-fix-notification';
     
@@ -110,7 +190,7 @@ export class ErrorInterceptorService {
     const shortSolution = solution.length > 150 ? solution.substring(0, 150) + '...' : solution;
     
     div.innerHTML = `
-      <div style="font-weight: bold; margin-bottom: 5px; font-size: 16px;">🤖 AI Fix Found</div>
+      <div style="font-weight: bold; margin-bottom: 5px; font-size: 16px;">🤖 AI Fix Found & Logged</div>
       <div style="font-size: 12px; opacity: 0.9; margin-bottom: 8px;">${shortError}</div>
       <div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 14px;">
         ${shortSolution}
